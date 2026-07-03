@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-950 font-sans text-slate-100 antialiased;
+  background-image: radial-gradient(60rem 60rem at 110% -10%, rgba(16, 185, 129, 0.08), transparent 60%),
+    radial-gradient(50rem 50rem at -10% 10%, rgba(56, 189, 248, 0.06), transparent 55%);
+  background-attachment: fixed;
+}
+
+/* 숫자 입력의 스피너 제거 (깔끔한 대시보드 룩) */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
