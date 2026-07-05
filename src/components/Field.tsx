@@ -1,3 +1,5 @@
+import { num } from '../lib/format'
+
 interface FieldProps {
   label: string
   value: number
@@ -22,14 +24,28 @@ export function Field({ label, value, onChange, min, max, step, suffix, display 
       <div className="flex items-baseline justify-between gap-2">
         <label className="text-sm font-medium text-slate-300">{label}</label>
         <div className="flex items-center gap-1">
-          <input
-            type="number"
-            value={Number.isFinite(value) ? value : ''}
-            min={min}
-            step={step}
-            onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
-            className="w-32 rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-right text-sm tabular-nums text-slate-100 outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-          />
+          {suffix === '원' ? (
+            // 금액 입력: 천 단위 콤마 표시 (type=number 는 콤마 불가 → text + 숫자만 파싱)
+            <input
+              type="text"
+              inputMode="numeric"
+              value={num(value)}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/[^\d]/g, '')
+                onChange(digits === '' ? 0 : Number(digits))
+              }}
+              className="w-32 rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-right text-sm tabular-nums text-slate-100 outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+            />
+          ) : (
+            <input
+              type="number"
+              value={Number.isFinite(value) ? value : ''}
+              min={min}
+              step={step}
+              onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+              className="w-32 rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-right text-sm tabular-nums text-slate-100 outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+            />
+          )}
           {suffix && <span className="w-4 text-xs text-slate-400">{suffix}</span>}
         </div>
       </div>
