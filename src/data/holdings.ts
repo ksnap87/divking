@@ -5,6 +5,7 @@ import type { Holding, PortfolioInput } from '../lib/simulate'
 //  - yieldPct: "현재 평가액 대비" 배당률(대략). 원가대비 YOC 는 자동으로 더 높게 나옴.
 //  - dpsGrowth: 최근 10년 DPS 평균성장률을 향후 전망으로. KB는 밸류업 특수라 보수적으로 10% 시작.
 //  - taxRate: 계좌별. 일반계좌(JPM)만 15.4%, ISA(KB)·연금(배당다우)은 0%.
+//  - allocPct: 신규 적립금 배분(%). 기본은 평가비중 근사(45/46/9). '세금최적 자동배분'으로 재설정 가능.
 export const DEFAULT_HOLDINGS: Holding[] = [
   {
     key: 'schd',
@@ -16,6 +17,7 @@ export const DEFAULT_HOLDINGS: Holding[] = [
     dpsGrowth: 10,
     priceGrowth: 6,
     taxRate: 0,
+    allocPct: 45,
   },
   {
     key: 'kb',
@@ -27,6 +29,7 @@ export const DEFAULT_HOLDINGS: Holding[] = [
     dpsGrowth: 10,
     priceGrowth: 5,
     taxRate: 0,
+    allocPct: 46,
   },
   {
     key: 'jpm',
@@ -38,6 +41,7 @@ export const DEFAULT_HOLDINGS: Holding[] = [
     dpsGrowth: 12,
     priceGrowth: 6,
     taxRate: 15.4,
+    allocPct: 9,
   },
 ]
 

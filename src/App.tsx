@@ -102,6 +102,7 @@ export default function App() {
                 <PortfolioBuilder
                   holdings={holdings}
                   onHolding={onHolding}
+                  onReplaceHoldings={setHoldings}
                   global={pglobal}
                   onGlobal={onGlobal}
                   onReset={onResetHoldings}

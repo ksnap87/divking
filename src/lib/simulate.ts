@@ -208,6 +208,8 @@ export interface Holding {
   priceGrowth: number
   /** 배당 세율 (%) — 계좌별 (일반 15.4, ISA·연금 0) */
   taxRate: number
+  /** 신규 적립금 배분 비중 (%) — 종목별. 계산 시 3종목 합으로 정규화 */
+  allocPct: number
 }
 
 export interface PortfolioInput {
@@ -279,6 +281,7 @@ export function holdingSnapshots(holdings: Holding[]): HoldingSnapshot[] {
 export function simulatePortfolio(input: PortfolioInput): PortfolioResult {
   const n = Math.max(0, Math.floor(input.years))
   const totalValue = input.holdings.reduce((s, h) => s + h.value, 0)
+  const totalAlloc = input.holdings.reduce((s, h) => s + Math.max(0, h.allocPct), 0)
 
   // 종목별 상태
   const st = input.holdings.map((h) => {
@@ -292,7 +295,13 @@ export function simulatePortfolio(input: PortfolioInput): PortfolioResult {
       value: h.value,
       cost: h.value / (1 + h.gainPct / 100), // 매입원가
       divBase: h.value * y0, // 연 세전 배당(현재)
-      weight: totalValue > 0 ? h.value / totalValue : 0, // 적립 배분(초기 평가비중 고정)
+      // 적립 배분: allocPct 정규화. 전부 0이면 평가비중으로 폴백.
+      weight:
+        totalAlloc > 0
+          ? Math.max(0, h.allocPct) / totalAlloc
+          : totalValue > 0
+            ? h.value / totalValue
+            : 0,
       lastGross: h.value * y0,
     }
   })

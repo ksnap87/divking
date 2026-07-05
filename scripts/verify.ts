@@ -13,6 +13,7 @@ import {
   type PortfolioInput,
 } from '../src/lib/simulate.ts'
 import { DEFAULT_HOLDINGS } from '../src/data/holdings.ts'
+import { accountPlan, optimizeAllocation, solveRealisticContribution } from '../src/lib/accounts.ts'
 import { won, pct } from '../src/lib/format.ts'
 
 let failures = 0
@@ -207,6 +208,55 @@ if (pneed !== null) {
   console.log(`  → 월 500만 목표 필요 연적립: ${won(pneed)}`)
 } else {
   console.log('  → 월 500만 목표: 현실적 범위 내 불가')
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n=== [9] 계좌별 적립 계획 + 세금최적 자동배분 ===')
+const plan12 = accountPlan(DEFAULT_HOLDINGS, 12_000_000)
+for (const r of plan12) {
+  console.log(
+    `  ${r.account.padEnd(6)} ${won(r.amount)}/년  ${
+      r.overHard ? '⚠️ 한도초과' : r.overDeduction ? '△ 세액공제초과' : 'OK'
+    }`,
+  )
+}
+assert(
+  plan12.every((r) => !r.overHard),
+  '기본 1,200만: 물리 한도 초과 없음',
+)
+
+const bigC = 42_278_170
+const planBig = accountPlan(DEFAULT_HOLDINGS, bigC)
+const pensionBig = planBig.find((r) => r.account === '연금저축')!
+assert(pensionBig.overHard, '적립 4,228만·비중배분: 연금 물리한도(1,800만) 초과 감지')
+
+const opt = optimizeAllocation(DEFAULT_HOLDINGS, bigC)
+const planOpt = accountPlan(opt, bigC)
+const pOpt = planOpt.find((r) => r.account === '연금저축')!
+const iOpt = planOpt.find((r) => r.account === 'ISA')!
+const gOpt = planOpt.find((r) => r.account === '일반')!
+console.log(
+  `  자동배분(${won(bigC)}): 연금 ${won(pOpt.amount)} · ISA ${won(iOpt.amount)} · 일반 ${won(gOpt.amount)}`,
+)
+assert(Math.abs(pOpt.amount - 6_000_000) < 1, '자동배분: 연금 = 600만(세액공제)')
+assert(Math.abs(iOpt.amount - 20_000_000) < 1, '자동배분: ISA = 2,000만')
+assert(Math.abs(pOpt.amount + iOpt.amount + gOpt.amount - bigC) < 1, '자동배분 합 = 총적립액')
+assert(!pOpt.overHard && !iOpt.overHard, '자동배분: 연금·ISA 물리 한도 내')
+
+const allKB = DEFAULT_HOLDINGS.map((h) => ({ ...h, allocPct: h.key === 'kb' ? 100 : 0 }))
+const rKB = simulatePortfolio({ holdings: allKB, contribution: 12_000_000, years: 15, reinvest: true, monthlyGoal: 5_000_000 })
+const rEven = simulatePortfolio({ holdings: DEFAULT_HOLDINGS, contribution: 12_000_000, years: 15, reinvest: true, monthlyGoal: 5_000_000 })
+console.log(`  KB 몰빵 vs 기본 최종 월배당: ${won(rKB.final.monthly)} vs ${won(rEven.final.monthly)}`)
+assert(rKB.final.monthly !== rEven.final.monthly, '적립 배분(allocPct) 변경이 결과에 반영됨')
+
+// 현실(세금최적 배분) 목표 역산: 계좌 한도 반영 → 한도무시보다 더 크고, 적용 후 목표 달성
+const realNeed = solveRealisticContribution({ holdings: DEFAULT_HOLDINGS, years: 15, reinvest: true, monthlyGoal: 5_000_000 })
+if (realNeed !== null) {
+  const realHoldings = optimizeAllocation(DEFAULT_HOLDINGS, realNeed)
+  const realCheck = simulatePortfolio({ holdings: realHoldings, contribution: realNeed, years: 15, reinvest: true, monthlyGoal: 5_000_000 })
+  console.log(`  현실(세금최적) 필요 연적립: ${won(realNeed)}  vs 한도무시 ${won(pneed ?? 0)}`)
+  assert(realCheck.final.monthly >= 5_000_000 * 0.999, '현실 역산: 적용(세금최적 배분) 후 목표 달성')
+  assert(realNeed > (pneed ?? 0), '현실 필요액 > 한도무시 필요액 (초과분 과세계좌 반영)')
 }
 
 // ---------------------------------------------------------------------------
