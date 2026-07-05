@@ -22,10 +22,8 @@ export const DEFAULT_INPUT: SimInput = {
 }
 
 /**
- * 시나리오 프리셋.
- *  - 앞의 3개는 스펙에 명시된 보수/기본/공격.
- *  - "내 실제 포트폴리오"는 캡처한 배당 엔진(배당다우존스 + KB금융 + 커버드콜 2종,
- *    약 5,800만원 규모)을 근사한 프리셋. 대부분 ISA/연금(비과세) 성격이라 세율 0.
+ * 시나리오 프리셋 (간단 모드).
+ * 실제 보유 종목 구성은 '내 포트폴리오(3종목)' 모드에서 다룬다.
  */
 export const PRESETS: Preset[] = [
   {
@@ -48,22 +46,6 @@ export const PRESETS: Preset[] = [
     emoji: '🚀',
     desc: 'DPS 10% · 주가 8%',
     patch: { dpsGrowth: 10, priceGrowth: 8 },
-  },
-  {
-    key: 'mine',
-    label: '내 실제 포트폴리오',
-    emoji: '👑',
-    desc: '배당엔진 5,800만 · 비과세 · 커버드콜 혼합',
-    patch: {
-      initialAsset: 58_000_000,
-      initialYield: 6,
-      dpsGrowth: 6,
-      priceGrowth: 5,
-      contribution: 12_000_000,
-      years: 15,
-      reinvest: true,
-      taxRate: 0,
-    },
   },
 ]
 

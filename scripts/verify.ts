@@ -3,7 +3,16 @@
 // UI를 붙이기 전에 순수 함수(simulate / solveContribution)가 상식적인 값을
 // 내는지, 그리고 몇 가지 불변식(단조성 등)을 만족하는지 확인한다.
 
-import { simulate, solveContribution, type SimInput } from '../src/lib/simulate.ts'
+import {
+  simulate,
+  solveContribution,
+  simulatePortfolio,
+  solvePortfolioContribution,
+  holdingSnapshots,
+  type SimInput,
+  type PortfolioInput,
+} from '../src/lib/simulate.ts'
+import { DEFAULT_HOLDINGS } from '../src/data/holdings.ts'
 import { won, pct } from '../src/lib/format.ts'
 
 let failures = 0
@@ -143,6 +152,62 @@ console.log(`  0년 final(폴백): 평가 ${won(zeroYears.final.value)} · 월�
 
 const already = solveContribution({ ...noContrib, initialAsset: 3e9, monthlyGoal: 1_000_000 })
 assert(already === 0, '이미 목표 달성 상태: 필요 적립액 0')
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+console.log('\n=== [8] 내 포트폴리오 (3종목, 원가 기준 YOC) ===')
+const pbase: PortfolioInput = {
+  holdings: DEFAULT_HOLDINGS,
+  contribution: 12_000_000,
+  years: 15,
+  reinvest: true,
+  monthlyGoal: 5_000_000,
+}
+for (const s of holdingSnapshots(DEFAULT_HOLDINGS)) {
+  console.log(
+    `  ${s.name.padEnd(18)} 평가비중 ${pct(s.valueWeight, 0).padStart(5)} · 원가 ${won(s.cost)} · 연배당 ${won(
+      s.grossAnnual,
+    )} · YOC원가 ${pct(s.yocOnCost)} (현재가 ${pct(s.yieldOnValue)})`,
+  )
+}
+const pres = simulatePortfolio(pbase)
+console.log(
+  `  → 시작 합계: 평가 ${won(pres.initialValue)} · 원가 ${won(pres.initialCost)} · 블렌디드 YOC원가 ${pct(
+    pres.blendedYocOnCost,
+  )} vs 현재가 ${pct(pres.blendedYieldOnValue)}`,
+)
+console.log(
+  `  → ${pbase.years}년 뒤: 평가 ${won(pres.final.value)} · 월배당(세후) ${won(pres.final.monthly)} · YOC원가 ${pct(
+    pres.final.yocOnCost,
+  )} · 달성 ${pres.goalYear ? `${pres.goalYear}년차` : '미달성'}`,
+)
+
+const psnaps = holdingSnapshots(DEFAULT_HOLDINGS)
+assert(pres.blendedYocOnCost > pres.blendedYieldOnValue, '블렌디드 YOC(원가) > 배당률(현재가)')
+const kb = psnaps.find((s) => s.key === 'kb')!
+assert(kb.yocOnCost > kb.yieldOnValue * 1.5, 'KB(+95%): 원가대비 YOC 가 현재가 배당률보다 크게 높다')
+let pv = true
+let pyoc = true
+for (let i = 1; i < pres.rows.length; i++) {
+  if (pres.rows[i].value <= pres.rows[i - 1].value) pv = false
+  if (pres.rows[i].yocOnCost <= pres.rows[i - 1].yocOnCost) pyoc = false
+}
+assert(pv, '포트폴리오: 평가금액 매년 증가')
+assert(pyoc, '포트폴리오: 원가대비 YOC 매년 상승')
+const y1gross = DEFAULT_HOLDINGS.reduce((s, h) => s + h.value * (h.yieldPct / 100), 0)
+assert(Math.abs(pres.rows[0].grossAnnual - y1gross) < 1, '1년차 세전배당 = Σ(평가액×배당률)')
+assert(pres.rows[0].netAnnual < pres.rows[0].grossAnnual, '세후 배당 < 세전 (JPM 15.4% 반영)')
+
+const { contribution: _pc, ...pnoContrib } = pbase
+void _pc
+const pneed = solvePortfolioContribution({ ...pnoContrib, monthlyGoal: 5_000_000 })
+if (pneed !== null) {
+  const pcheck = simulatePortfolio({ ...pbase, contribution: pneed })
+  assert(pcheck.final.monthly >= 5_000_000 * 0.999, `포트폴리오 역산: 연적립 ${won(pneed)} → 월 500만 달성`)
+  console.log(`  → 월 500만 목표 필요 연적립: ${won(pneed)}`)
+} else {
+  console.log('  → 월 500만 목표: 현실적 범위 내 불가')
+}
 
 // ---------------------------------------------------------------------------
 console.log(`\n${failures === 0 ? '🎉 모든 검증 통과' : `⚠️  ${failures}개 검증 실패`}\n`)
